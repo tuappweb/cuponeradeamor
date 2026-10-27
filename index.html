@@ -98,6 +98,12 @@
     ></iframe>
   </div>
 
+  <button id="btnPantallaCompleta" type="button" aria-label="Pantalla completa" title="Pantalla completa" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>
+    </svg>
+  </button>
+
   <script>
     // Dirección de la app web de Apps Script de la Cuponera (termina en /exec)
     const URL_APP = 'https://script.google.com/macros/s/AKfycbxZ72rf5-L_GTe9ClrjMiZJww2JRWZZ5lexPKa1HPNoSy1BR3-QMAQefC6LgY4ln_SD/exec';
@@ -145,6 +151,22 @@
     }
 
     btn.addEventListener('click', alternarPantallaCompleta);
+
+    // La app (dentro del iframe) pide abrir WhatsApp: se abre desde aquí, que es la página principal.
+    // Solo se aceptan mensajes de Apps Script y solo links de WhatsApp.
+    window.addEventListener('message', ev => {
+      const d = ev.data;
+      if (!d || d.tipo !== 'cuponera-abrir' || typeof d.url !== 'string') return;
+      let origenOk = false;
+      try { origenOk = ev.origin === 'null' || /\.googleusercontent\.com$/.test(new URL(ev.origin).hostname); } catch (e) {}
+      if (!origenOk) return;
+      if (!/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(d.url)) return;
+
+      try { ev.source.postMessage({ tipo: 'cuponera-abierto', id: d.id }, '*'); } catch (e) {}
+      const w = window.open(d.url, '_blank');
+      if (w) { try { w.opener = null; } catch (e) {} }
+      else location.href = d.url;   // si se bloqueó la ventana nueva, se abre en esta misma
+    });
     document.addEventListener('fullscreenchange', actualizarBoton);
     document.addEventListener('webkitfullscreenchange', actualizarBoton);
     actualizarBoton();
