@@ -24,7 +24,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Cuponera">
   <meta property="og:title" content="Cuponera de amor">
-  <meta property="og:description" content="Te invitaron a compartir una cuponera: regálense vales y canjéenlos cuando quieran.">
+  <meta property="og:description" content="Cupones de amor para regalarse, pedirse y canjear en pareja.">
   <meta property="og:url" content="https://tuappweb.github.io/cuponeradeamor/">
   <meta property="og:image" content="https://tuappweb.github.io/cuponeradeamor/icon-512.png">
   <meta property="og:image:width" content="512">
@@ -100,16 +100,25 @@
 
   <script>
     // Dirección de la app web de Apps Script de la Cuponera (termina en /exec)
-    const URL_APP = 'https://script.google.com/macros/s/AKfycbxZ72rf5-L_GTe9ClrjMiZJww2JRWZZ5lexPKa1HPNoSy1BR3-QMAQefC6LgY4ln_SD/exec';
+    const URL_APP = 'PEGA_AQUI_LA_URL_EXEC_DE_LA_CUPONERA';
 
-    // Enlace de invitación (ej: .../?invite=3f9a1c0b7d2e): se le pasa el código a la app.
-    // Los códigos de la Cuponera son letras y números en minúscula, así que no se pasan a mayúscula.
+    // Se le pasan a la app los códigos que vengan en el link:
+    //   ?invite=…  invitación a una cuponera
+    //   ?ver=…     link para ver un cupón canjeado (el que se comparte por WhatsApp)
+    // Los códigos son letras y números; se respetan mayúsculas y minúsculas.
     (function () {
-      const invite = (new URLSearchParams(location.search).get('invite') || '')
-        .replace(/[^a-zA-Z0-9]/g, '').slice(0, 40);
-      document.getElementById('miIframe').src = URL_APP + (invite ? '?invite=' + encodeURIComponent(invite) : '');
-      // Se limpia la barra de direcciones para que el código no quede ahí al recargar
-      if (invite && history.replaceState) history.replaceState(null, '', location.pathname);
+      const q = new URLSearchParams(location.search);
+      const limpiar = v => (v || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 40);
+      const invite = limpiar(q.get('invite'));
+      const ver = limpiar(q.get('ver'));
+      const params = new URLSearchParams();
+      if (invite) params.set('invite', invite);
+      if (ver) params.set('ver', ver);
+      const extra = params.toString();
+      document.getElementById('miIframe').src = URL_APP + (extra ? '?' + extra : '');
+      // El código de invitación se borra de la barra de direcciones para que no quede al recargar.
+      // El de "ver" se mantiene, así ese link se puede recargar o volver a compartir.
+      if (invite && !ver && history.replaceState) history.replaceState(null, '', location.pathname);
     })();
 
     const btn = document.getElementById('btnPantallaCompleta');
