@@ -158,6 +158,25 @@
     setTimeout(quitarInicio, 25000);   // último recurso: nunca queda tapando la app para siempre
 
 
+    // ---- Sesión de la app guardada aquí (necesario en iPhone) ----
+    // Safari aísla y borra lo que guarda la app dentro del iframe de Google; esta página sí lo conserva.
+    // Solo se atiende a la app de Apps Script (origen *.googleusercontent.com) y la respuesta va solo a ella.
+    window.addEventListener('message', ev => {
+      const d = ev.data;
+      if (!d || (d.tipo !== 'cuponera-pedir-sesion' && d.tipo !== 'cuponera-guardar-sesion')) return;
+      let deLaApp = false;
+      try { deLaApp = /\.googleusercontent\.com$/.test(new URL(ev.origin).hostname); } catch (e) {}
+      if (!deLaApp) return;
+      if (d.tipo === 'cuponera-guardar-sesion') {
+        const t = String(d.token || '').replace(/[^a-f0-9]/g, '').slice(0, 80);
+        try { t ? localStorage.setItem('cuponera_sesion', t) : localStorage.removeItem('cuponera_sesion'); } catch (e) {}
+        return;
+      }
+      let token = '';
+      try { token = localStorage.getItem('cuponera_sesion') || ''; } catch (e) {}
+      try { ev.source.postMessage({ tipo: 'cuponera-sesion', token }, ev.origin); } catch (e) {}
+    });
+
     // La app (dentro del iframe) pide abrir WhatsApp: se abre desde aquí, que es la página principal.
     // Solo se aceptan mensajes de Apps Script y solo links de WhatsApp.
     window.addEventListener('message', ev => {
