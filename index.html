@@ -64,27 +64,6 @@
       border: none;
       display: block;
     }
-    /* Botón de pantalla completa: abajo a la izquierda, sobre la barra de gestos */
-    #btnPantallaCompleta {
-      position: fixed;
-      left: calc(14px + env(safe-area-inset-left, 0px));
-      bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-      z-index: 10;
-      width: 44px;
-      height: 44px;
-      display: grid;
-      place-items: center;
-      padding: 0;
-      background: var(--boton); /* rosado de la Cuponera */
-      color: #fff;
-      border: none;
-      border-radius: 50%;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, .25);
-      cursor: pointer;
-    }
-    #btnPantallaCompleta svg { width: 22px; height: 22px; }
-    #btnPantallaCompleta:focus-visible { outline: 3px solid #F4B63F; outline-offset: 2px; }
-    #btnPantallaCompleta[hidden] { display: none; }
 
     /* Pantalla de inicio: se ve mientras Apps Script carga la app (la primera vez tarda unos segundos) */
     #inicio {
@@ -136,6 +115,7 @@
       <button type="button" onclick="location.reload()">Reintentar</button>
     </div>
   </div>
+
   <script>
     // Dirección de la app web de Apps Script de la Cuponera (termina en /exec)
     const URL_APP = 'https://script.google.com/macros/s/AKfycbxZ72rf5-L_GTe9ClrjMiZJww2JRWZZ5lexPKa1HPNoSy1BR3-QMAQefC6LgY4ln_SD/exec';
@@ -159,47 +139,24 @@
       if (invite && !ver && history.replaceState) history.replaceState(null, '', location.pathname);
     })();
 
-    const btn = document.getElementById('btnPantallaCompleta');
-    const raiz = document.documentElement;
-    const pedir = raiz.requestFullscreen || raiz.webkitRequestFullscreen;
-    const salir = document.exitFullscreen || document.webkitExitFullscreen;
-    const enPantallaCompleta = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
-
-    // Abierta desde el acceso directo (ya está en modo app)
-    const comoApp = window.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches
-                 || window.navigator.standalone === true;
-
-    // El botón aparece solo donde sirve: el navegador permite pantalla completa
-    // (el iPhone no lo permite para páginas; el iPad y Android sí) y no se abrió como app.
-    function actualizarBoton() {
-      btn.hidden = !pedir || comoApp || enPantallaCompleta();
-    }
-
-    function alternarPantallaCompleta() {
-      if (enPantallaCompleta()) { if (salir) salir.call(document); return; }
-      if (!pedir) return;
-      const r = pedir.call(raiz, { navigationUI: 'hide' });
-      if (r && r.catch) r.catch(err => console.error('No se pudo activar pantalla completa: ' + err.message));
-    }
-
-    btn.addEventListener('click', alternarPantallaCompleta);
-
-    // La pantalla de inicio se quita cuando la app avisa que está lista
-    // (o, por si acaso, 12 segundos después de que cargue el iframe).
+    // ---- Pantalla de inicio (va primero: aunque algo de más abajo falle, siempre se quita) ----
+    // Se quita cuando la app avisa que está lista, o 4 s después de que cargue el iframe.
+    // Si a los 10 s sigue cargando, ofrece abrir la app directo en Google.
     const inicio = document.getElementById('inicio');
     function quitarInicio() {
-      if (inicio.classList.contains('oculto')) return;
+      if (!inicio || inicio.classList.contains('oculto')) return;
       inicio.classList.add('oculto');
       setTimeout(() => inicio.remove(), 400);
     }
     window.addEventListener('message', ev => {
       if (ev.data && ev.data.tipo === 'cuponera-lista') quitarInicio();
     });
-    // Si la app es una versión que no avisa, se quita 4 s después de que cargue el iframe.
     document.getElementById('miIframe').addEventListener('load', () => setTimeout(quitarInicio, 4000));
-    // Si a los 10 s sigue cargando, se ofrece abrir la app directo en Google (sin el contenedor).
-    document.getElementById('abrirDirecto').href = URL_APP;
-    setTimeout(() => inicio.classList.add('lento'), 10000);
+    const abrirDirecto = document.getElementById('abrirDirecto');
+    if (abrirDirecto) abrirDirecto.href = URL_APP;
+    setTimeout(() => { if (inicio) inicio.classList.add('lento'); }, 10000);
+    setTimeout(quitarInicio, 25000);   // último recurso: nunca queda tapando la app para siempre
+
 
     // La app (dentro del iframe) pide abrir WhatsApp: se abre desde aquí, que es la página principal.
     // Solo se aceptan mensajes de Apps Script y solo links de WhatsApp.
@@ -216,9 +173,6 @@
       if (w) { try { w.opener = null; } catch (e) {} }
       else location.href = d.url;   // si se bloqueó la ventana nueva, se abre en esta misma
     });
-    document.addEventListener('fullscreenchange', actualizarBoton);
-    document.addEventListener('webkitfullscreenchange', actualizarBoton);
-    actualizarBoton();
   </script>
 
 </body>
